@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>FTE Calculator</title>
+    <!-- Viewport for mobile scaling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Font Awesome link for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000000;
+            color: #ffcc00;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #ffcc00;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        input, select {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ffcc00;
+            border-radius: 4px;
+            background-color: #111111;
+            color: #ffcc00;
+        }
+
+        /* Date picker style */
+        input[type="date"] {
+            color: #ffcc00;
+            border: 1px solid #ffcc00;
+            background-color: #111111;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #ffcc00;
+            color: #000000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #ffaa00;
+            color: #000000;
+        }
+
+        #result {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffcc00;
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        #fteRateContainer {
+            display: none;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            input, select, button {
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            button {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Header -->
+    <h1>
+        <i class="fas fa-cat"></i> FTE Calculator <i class="fas fa-cat"></i>
+    </h1>
+
+    <!-- Date Pickers -->
+    <label for="startDate">Start Date:</label>
+    <input type="date" id="startDate"><br>
+
+    <label for="endDate">End Date:</label>
+    <input type="date" id="endDate"><br>
+
+    <!-- FTE Type Dropdown -->
+    <label for="fteType">FTE Type:</label>
+    <select id="fteType" onchange="updateFTEInput()">
+        <option value="full">Full Time (1.0 FTE)</option>
+        <option value="part">Part Time</option>
+    </select><br>
+
+    <!-- FTE Rate Input (shown only for Part Time) -->
+    <div id="fteRateContainer">
+        <label for="fteRate">FTE Rate (e.g. 0.50):</label>
+        <input type="number" step="0.01" id="fteRate" placeholder="0.50"><br>
+    </div>
+
+    <!-- Buttons -->
+    <button onclick="calculateFTE()">Calculate</button>
+    <button onclick="clearForm()">Clear</button>
+
+    <!-- FTE Months -->
+    <h2>FTE Months:</h2>
+    <p id="result"></p>
+
+    <script>
+        function parseDate(input) {
+            let parts = input.split('-'); // date picker gives YYYY-MM-DD
+            let year = parseInt(parts[0], 10);
+            let month = parseInt(parts[1], 10) - 1;
+            let day = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+        }
+
+        function getDaysInMonth(year, month) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function calculateFractionalMonths(startDate, endDate) {
+            let years = endDate.getFullYear() - startDate.getFullYear();
+            let months = endDate.getMonth() - startDate.getMonth();
+            let totalMonths = years * 12 + months;
+
+            let partialMonthFraction = 0;
+
+            if (endDate.getDate() >= startDate.getDate()) {
+                partialMonthFraction = (endDate.getDate() - startDate.getDate()) / getDaysInMonth(endDate.getFullYear(), endDate.getMonth());
+            } else {
+                totalMonths -= 1;
+                let daysInPrevMonth = getDaysInMonth(endDate.getFullYear(), (endDate.getMonth() - 1 + 12) % 12);
+                partialMonthFraction = (daysInPrevMonth - startDate.getDate() + endDate.getDate()) / daysInPrevMonth;
+            }
+
+            return totalMonths + partialMonthFraction;
+        }
+
+        function updateFTEInput() {
+            let fteType = document.getElementById('fteType').value;
+            let fteRateContainer = document.getElementById('fteRateContainer');
+
+            if (fteType === 'full') {
+                fteRateContainer.style.display = 'none';
+            } else {
+                fteRateContainer.style.display = 'block';
+            }
+        }
+
+        function calculateFTE() {
+            let startDateInput = document.getElementById('startDate').value;
+            let endDateInput = document.getElementById('endDate').value;
+            let fteType = document.getElementById('fteType').value;
+
+            let fteRate;
+            if (fteType === 'full') {
+                fteRate = 1.0;
+            } else {
+                fteRate = parseFloat(document.getElementById('fteRate').value);
+                if (isNaN(fteRate)) {
+                    alert("Please enter a valid FTE rate for Part Time.");
+                    return;
+                }
+            }
+
+            let startDate = parseDate(startDateInput);
+            let endDate = parseDate(endDateInput);
+
+            if (endDate < startDate) {
+                alert("End date must be after start date.");
+                return;
+            }
+
+            let fractionalMonths = calculateFractionalMonths(startDate, endDate);
+            let fteMonths = fractionalMonths * fteRate;
+
+            document.getElementById('result').textContent = fteMonths.toFixed(2);
+        }
+
+        function clearForm() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('fteType').value = 'full';
+            document.getElementById('fteRate').value = '';
+            document.getElementById('result').textContent = '';
+            updateFTEInput();
+        }
+    </script>
+</body>
+</html>
